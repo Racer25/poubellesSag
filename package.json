@@ -1,0 +1,9 @@
+{
+  "name": "Poubelles",
+  "version": "1.0.0",
+  "dependencies": {
+    "cron": "^1.3.0",
+    "node-google-calendar": "^1.1.1",
+    "request": "^2.88.0"
+  }
+}

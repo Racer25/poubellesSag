@@ -1,0 +1,8 @@
+{
+  "CivicNumber": YOUR_CIVIL_NUMBER, //example: 1787
+  "Street": "YOUR_STREET",          //example: "Rue Sainte-Anne"
+  "CalendarId": "YOUR_CALENDAR_ID"  //example: "xxxx.yyy@gmail.com"
+}
+
+//Use https://ville.saguenay.ca/services-aux-citoyens/environnement/ordures-menageres/horaire-de-la-collecte web page
+//to know the exact values of the fields

@@ -9,4 +9,6 @@ Project to automatically save dates for garbage in a google calendar  in th city
 - Third, in this last folder, create a file named **"settings.js"** and complete it as detailed in https://www.npmjs.com/package/node-google-calendar
 (To do that, you'll need some information about Google Calendar API, it can be found at https://github.com/yuhong90/node-google-calendar/wiki#preparations-needed)
 
+- Run the command **npm update** to install node modules
+
 - Run the command **node app.js** and new events for garbage will be added on your google calendar (Update every hour while executing)

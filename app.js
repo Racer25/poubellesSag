@@ -70,6 +70,8 @@ let getCeduleRequest = function (jour, type) {
 
 // Function to loop
 let iteration = function () {
+
+    console.log("/** Update of of garbage dates at "+ new Date().toISOString()+" **/");
     getRuesRequest(CONFIG.CivicNumber)
         .then(response => {
             let id = response.find((elem) => elem.value === CONFIG.Street).id;

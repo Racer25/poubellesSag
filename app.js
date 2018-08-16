@@ -183,8 +183,8 @@ let iteration = function () {
             // MAJ dates
             date_cueillette_vidange.setDate(date_cueillette_vidange.getDate() - 1);
             date_cueillette_vidange.setHours(14, 0, 0);
-            let date_cueillette_vidange_start = date_cueillette_vidange;
-            let date_cueillette_vidange_end = new Date(date_cueillette_vidange);
+            date_cueillette_vidange_start = date_cueillette_vidange;
+            date_cueillette_vidange_end = new Date(date_cueillette_vidange);
             date_cueillette_vidange_end.setHours(15, 0, 0);
 
             return promiseCheckCalendar(date_cueillette_vidange_start, date_cueillette_vidange_end);

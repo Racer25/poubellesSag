@@ -68,131 +68,151 @@ let getCeduleRequest = function (jour, type) {
     });
 };
 
+//Promises for calendar
+let promiseCheckCalendar = function(date_cueillette_start, date_cueillette_end) {
+        let paramsCheck = {
+            timeMin: date_cueillette_start.toISOString(),
+            timeMax: date_cueillette_end.toISOString(),
+            q: 'Poubelle',
+            singleEvents: true,
+            orderBy: 'startTime'
+        };
+
+        return cal.Events.list(CONFIG.CalendarId, paramsCheck);
+};
+let promiseInsertCalendar = function(date_cueillette_start, date_cueillette_end, couleurPoubelle) {
+    let paramsInsert = {
+        'start': {'dateTime': date_cueillette_start},
+        'end': {'dateTime': date_cueillette_end},
+        'location': 'Domicile',
+        'summary': 'Poubelle '+couleurPoubelle+"!",
+        'status': 'tentative',
+        'description': 'SOOORT LAA',
+        'colorId': 1
+    };
+
+    return cal.Events.insert(CONFIG.CalendarId, paramsInsert);
+};
+
+//Promise with tasks in common
+let promiseGlobal =  new Promise((resolve, reject) =>
+    {
+        getRuesRequest(CONFIG.CivicNumber)
+            .then(streetJson => {
+                let id = streetJson.find((elem) => elem.value === CONFIG.Street).id;
+                return getCollecteInfoRequest(id);
+            })
+            .then(resolve)
+            .catch(reject)
+    });
+
 // Function to loop
 let iteration = function () {
 
     console.log("\n/** Update of of garbage dates at "+ new Date().toISOString()+" **/");
-    getRuesRequest(CONFIG.CivicNumber)
-        .then(response => {
-            let id = response.find((elem) => elem.value === CONFIG.Street).id;
-            return getCollecteInfoRequest(id);
-        })
-        .then(response => {
+
+    //Recyclage
+    let date_cueillette_recyclage_start = new Date();
+    let date_cueillette_recyclage_end = new Date();
+    promiseGlobal
+        .then(daysJson =>
+        {
             let typeRecyclage = "recyclage";
-            let jourRecyclage = response.recyclage_jour;
-            let typeVidange = "vidange";
-            let jourVidange = response.poubelle_jour;
+            let jourRecyclage = daysJson.recyclage_jour;
 
-            let requestsCedule = [];
-            requestsCedule.push
-            (
-                getCeduleRequest(jourRecyclage, typeRecyclage),
-                getCeduleRequest(jourVidange, typeVidange)
-            );
-
-            return Promise.all(requestsCedule);
+            return getCeduleRequest(jourRecyclage, typeRecyclage);
         })
-        .then(jsonResponses => {
+        .then(datesJson =>
+        {
             // Récupération des dates
-            let date_cueillette_recyclageString = jsonResponses[0].date_cueillette;
-            let date_cueillette_vidangeString = jsonResponses[1].date_cueillette;
+            let date_cueillette_recyclageString = datesJson.date_cueillette;
             let date_cueillette_recyclage = new Date(date_cueillette_recyclageString);
-            let date_cueillette_vidange = new Date(date_cueillette_vidangeString);
 
             // MAJ dates
             date_cueillette_recyclage.setDate(date_cueillette_recyclage.getDate() - 1);
             date_cueillette_recyclage.setHours(14, 0, 0);
-            let date_cueillette_recyclage_start = date_cueillette_recyclage;
-            let date_cueillette_recyclage_end = new Date(date_cueillette_recyclage);
+            date_cueillette_recyclage_start = date_cueillette_recyclage;
+            date_cueillette_recyclage_end = new Date(date_cueillette_recyclage);
             date_cueillette_recyclage_end.setHours(15, 0, 0);
 
+            return promiseCheckCalendar(date_cueillette_recyclage_start, date_cueillette_recyclage_end);
+        })
+        .then(listEvents =>
+        {
+            if (listEvents.length === 0)
+            {
+                //Insertion
+                console.log("Insertion of event recyclage at "+date_cueillette_recyclage_start.toISOString()+"...");
+                return promiseInsertCalendar(date_cueillette_recyclage_start, date_cueillette_recyclage_end, "bleu");
+            }
+            else
+            {
+                console.log("Event recyclage already existing at "+date_cueillette_recyclage_start.toISOString()+", no insertion to do...");
+                return false;
+            }
+        })
+        .then((data) =>
+        {
+            if(data !== false)
+            {
+                console.log('Insertion of event recyclage  finished');
+            }
+        })
+        .catch(error =>
+        {
+            console.error(error);
+        });
+
+    //Vidange
+    let date_cueillette_vidange_start = new Date();
+    let date_cueillette_vidange_end = new Date();
+    promiseGlobal
+        .then(daysJson =>
+        {
+            let typeVidange = "vidange";
+            let jourVidange = daysJson.poubelle_jour;
+
+            return getCeduleRequest(jourVidange, typeVidange);
+        })
+        .then(datesJson =>
+        {
+            // Récupération des dates
+            let date_cueillette_vidangeString = datesJson.date_cueillette;
+            let date_cueillette_vidange = new Date(date_cueillette_vidangeString);
+
+            // MAJ dates
             date_cueillette_vidange.setDate(date_cueillette_vidange.getDate() - 1);
             date_cueillette_vidange.setHours(14, 0, 0);
             let date_cueillette_vidange_start = date_cueillette_vidange;
             let date_cueillette_vidange_end = new Date(date_cueillette_vidange);
             date_cueillette_vidange_end.setHours(15, 0, 0);
 
-
-            // Insertion in calendar
-            let paramsCheckRecyclage = {
-                timeMin: date_cueillette_recyclage_start.toISOString(),
-                timeMax: date_cueillette_recyclage_end.toISOString(),
-                q: 'Poubelle',
-                singleEvents: true,
-                orderBy: 'startTime'
-            };
-
-            cal.Events.list(CONFIG.CalendarId, paramsCheckRecyclage)
-                .then(json => {
-                    if (json.length === 0)
-                    {
-                        console.log("Insertion of event recyclage at "+date_cueillette_recyclage_start.toISOString()+"...");
-                        let paramsInsertRecyclage = {
-                            'start': {'dateTime': date_cueillette_recyclage_start},
-                            'end': {'dateTime': date_cueillette_recyclage_end},
-                            'location': 'Domicile',
-                            'summary': 'Poubelle bleu!',
-                            'status': 'tentative',
-                            'description': 'SOOORT LAA',
-                            'colorId': 1
-                        };
-
-                        cal.Events.insert(CONFIG.CalendarId, paramsInsertRecyclage)
-                            .then(resp => {
-                                console.log('Insertion of event recyclage  finished');
-                            })
-                            .catch(err => {
-                                console.log('Error: insertEvent-' + err.message);
-                            });
-                    }
-                    else
-                    {
-                        console.log("Event recyclage already existing at "+date_cueillette_recyclage_start.toISOString()+", no insertion to do...");
-                    }
-                }).catch(err => {
-                //Error
-                console.log('Error: listSingleEvents -' + err.message);
-            });
-
-            let paramsCheckVidange = {
-                timeMin: date_cueillette_vidange_start.toISOString(),
-                timeMax: date_cueillette_vidange_end.toISOString(),
-                q: 'Poubelle',
-                singleEvents: true,
-                orderBy: 'startTime'
-            };
-
-            cal.Events.list(CONFIG.CalendarId, paramsCheckVidange)
-                .then(json => {
-                    if (json.length === 0)
-                    {
-                        console.log("Insertion of event vidange at "+date_cueillette_vidange_start.toISOString()+"...");
-                        let paramsInsertVidange = {
-                            'start': {'dateTime': date_cueillette_vidange_start},
-                            'end': {'dateTime': date_cueillette_vidange_end},
-                            'location': 'Domicile',
-                            'summary': 'Poubelle verte!',
-                            'status': 'tentative',
-                            'description': 'SOOORT LAA!!',
-                            'colorId': 1
-                        };
-
-                        cal.Events.insert(CONFIG.CalendarId, paramsInsertVidange)
-                            .then(resp => {
-                                console.log("Insertion of event vidange finished");
-                            })
-                            .catch(err => {
-                                console.log('Error: insertEvent-' + err.message);
-                            });
-                    }
-                    else
-                    {
-                        console.log("Event vidange already existing at "+date_cueillette_vidange_start.toISOString()+", no insertion to do...");
-                    }
-                }).catch(err => {
-                //Error
-                console.log('Error: listSingleEvents -' + err.message);
-            });
+            return promiseCheckCalendar(date_cueillette_vidange_start, date_cueillette_vidange_end);
+        })
+        .then(listEvents =>
+        {
+            if (listEvents.length === 0)
+            {
+                //Insertion
+                console.log("Insertion of event vidange at "+date_cueillette_vidange_start.toISOString()+"...");
+                return promiseInsertCalendar(date_cueillette_vidange_start, date_cueillette_vidange_end, "verte");
+            }
+            else
+            {
+                console.log("Event vidange already existing at "+date_cueillette_vidange_start.toISOString()+", no insertion to do...");
+                return false;
+            }
+        })
+        .then((data) =>
+        {
+            if(data !== false)
+            {
+                console.log('Insertion of event vidange  finished');
+            }
+        })
+        .catch(error =>
+        {
+            console.error(error);
         });
 };
 

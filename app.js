@@ -71,7 +71,7 @@ let getCeduleRequest = function (jour, type) {
 // Function to loop
 let iteration = function () {
 
-    console.log("/** Update of of garbage dates at "+ new Date().toISOString()+" **/");
+    console.log("\n/** Update of of garbage dates at "+ new Date().toISOString()+" **/");
     getRuesRequest(CONFIG.CivicNumber)
         .then(response => {
             let id = response.find((elem) => elem.value === CONFIG.Street).id;
@@ -105,16 +105,12 @@ let iteration = function () {
             let date_cueillette_recyclage_start = date_cueillette_recyclage;
             let date_cueillette_recyclage_end = new Date(date_cueillette_recyclage);
             date_cueillette_recyclage_end.setHours(15, 0, 0);
-            console.log(date_cueillette_recyclage_start);
-            console.log(date_cueillette_recyclage_end);
 
             date_cueillette_vidange.setDate(date_cueillette_vidange.getDate() - 1);
             date_cueillette_vidange.setHours(14, 0, 0);
             let date_cueillette_vidange_start = date_cueillette_vidange;
             let date_cueillette_vidange_end = new Date(date_cueillette_vidange);
             date_cueillette_vidange_end.setHours(15, 0, 0);
-            console.log(date_cueillette_vidange_start);
-            console.log(date_cueillette_vidange_end);
 
 
             // Insertion in calendar
@@ -128,10 +124,9 @@ let iteration = function () {
 
             cal.Events.list(CONFIG.CalendarId, paramsCheckRecyclage)
                 .then(json => {
-                    //Success
-                    console.log('List of events on calendar within time-range:');
-                    console.log(json);
-                    if (json.length === 0) {
+                    if (json.length === 0)
+                    {
+                        console.log("Insertion of event recyclage at "+date_cueillette_recyclage_start.toISOString()+"...");
                         let paramsInsertRecyclage = {
                             'start': {'dateTime': date_cueillette_recyclage_start},
                             'end': {'dateTime': date_cueillette_recyclage_end},
@@ -144,12 +139,15 @@ let iteration = function () {
 
                         cal.Events.insert(CONFIG.CalendarId, paramsInsertRecyclage)
                             .then(resp => {
-                                console.log('inserted event:');
-                                console.log(resp);
+                                console.log('Insertion of event recyclage  finished');
                             })
                             .catch(err => {
                                 console.log('Error: insertEvent-' + err.message);
                             });
+                    }
+                    else
+                    {
+                        console.log("Event recyclage already existing at "+date_cueillette_recyclage_start.toISOString()+", no insertion to do...");
                     }
                 }).catch(err => {
                 //Error
@@ -157,8 +155,8 @@ let iteration = function () {
             });
 
             let paramsCheckVidange = {
-                timeMin: date_cueillette_recyclage_start.toISOString(),
-                timeMax: date_cueillette_recyclage_end.toISOString(),
+                timeMin: date_cueillette_vidange_start.toISOString(),
+                timeMax: date_cueillette_vidange_end.toISOString(),
                 q: 'Poubelle',
                 singleEvents: true,
                 orderBy: 'startTime'
@@ -166,10 +164,9 @@ let iteration = function () {
 
             cal.Events.list(CONFIG.CalendarId, paramsCheckVidange)
                 .then(json => {
-                    //Success
-                    console.log('List of events on calendar within time-range:');
-                    console.log(json);
-                    if (json.length === 0) {
+                    if (json.length === 0)
+                    {
+                        console.log("Insertion of event vidange at "+date_cueillette_vidange_start.toISOString()+"...");
                         let paramsInsertVidange = {
                             'start': {'dateTime': date_cueillette_vidange_start},
                             'end': {'dateTime': date_cueillette_vidange_end},
@@ -182,12 +179,15 @@ let iteration = function () {
 
                         cal.Events.insert(CONFIG.CalendarId, paramsInsertVidange)
                             .then(resp => {
-                                console.log('inserted event:');
-                                console.log(resp);
+                                console.log("Insertion of event vidange finished");
                             })
                             .catch(err => {
                                 console.log('Error: insertEvent-' + err.message);
                             });
+                    }
+                    else
+                    {
+                        console.log("Event vidange already existing at "+date_cueillette_vidange_start.toISOString()+", no insertion to do...");
                     }
                 }).catch(err => {
                 //Error

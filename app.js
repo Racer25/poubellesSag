@@ -175,7 +175,7 @@ let iteration = function ()
 // Cronjob config
 let task = new CronJob(
     {
-        cronTime: '* * * * *',
+        cronTime: '01 * * * *',
         onTick: iteration,
         start: false,
         timeZone: 'America/Los_Angeles'

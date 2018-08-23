@@ -4,7 +4,7 @@ const CalendarAPI = require('node-google-calendar');
 let CronJob = require('cron').CronJob;
 
 const CONFIG_CALENDAR = require('./calendarAPI/settings');
-let cal = new CalendarAPI(CONFIG_CALENDAR);
+let cal;
 
 //CONFIG file
 const CONFIG = require('./config.json');
@@ -110,6 +110,8 @@ let promiseGlobal =  new Promise((resolve, reject) =>
 let iteration = function () {
 
     console.log("\n/** Update of of garbage dates at "+ new Date().toISOString()+" **/");
+    //Init calendar
+    cal = new CalendarAPI(CONFIG_CALENDAR);
 
     //Recyclage
     let date_cueillette_recyclage_start = new Date();
@@ -217,12 +219,13 @@ let iteration = function () {
 };
 
 // Cronjob config
-let task = new CronJob({
-    cronTime: '01 * * * *',
-    onTick: iteration,
-    start: false,
-    timeZone: 'America/Los_Angeles'
-});
+let task = new CronJob(
+    {
+        cronTime: '01 * * * *',
+        onTick: iteration,
+        start: false,
+        timeZone: 'America/Los_Angeles'
+    } );
 
 // Launch CronJob
 task.start();

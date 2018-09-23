@@ -9,6 +9,20 @@ let cal;
 //CONFIG file
 const CONFIG = require('./config.json');
 
+/**
+ * @return {boolean}
+ */
+let IsJsonString = function(str) {
+    try
+    {
+        JSON.parse(str);
+    } catch (e)
+    {
+        return false;
+    }
+    return true;
+};
+
 // Requests for https://ville.saguenay.ca/services-aux-citoyens/environnement/ordures-menageres/horaire-de-la-collecte
 let getRuesRequest = function (civicNumber)
 {
@@ -22,6 +36,9 @@ let getRuesRequest = function (civicNumber)
                         console.error(err);
                         console.error(httpResponse);
                         reject(err);
+                    }
+                    else if(!IsJsonString(body)) {
+                        reject("It's not JSON!! :"+ body);
                     }
                     else {
                         resolve(JSON.parse(body));
@@ -43,6 +60,9 @@ let getCollecteInfoRequest = function (idBatiment)
                         console.error(httpResponse);
                         reject(err);
                     }
+                    else if(!IsJsonString(body)) {
+                        reject("It's not JSON!! :"+ body);
+                    }
                     else {
                         resolve(JSON.parse(body));
                     }
@@ -62,6 +82,9 @@ let getCeduleRequest = function (jour, type)
                         console.error(err);
                         console.error(httpResponse);
                         reject(err);
+                    }
+                    else if(!IsJsonString(body)) {
+                        reject("It's not JSON!! :"+ body);
                     }
                     else {
                         resolve(JSON.parse(body));

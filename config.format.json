@@ -1,7 +1,14 @@
 {
-  "CivicNumber": YOUR_CIVIL_NUMBER, //example: 1787
-  "Street": "YOUR_STREET",          //example: "Rue Sainte-Anne"
-  "CalendarId": "YOUR_CALENDAR_ID"  //example: "xxxx.yyy@gmail.com"
+  "GooglePassword":"YOUR_GOOGLE_PASSWORD",
+  "Adresses": [
+    {
+      "CivicNumber": YOUR_CIVIL_NUMBER,                 //example: 1787
+      "Street": "YOUR_STREET",                          //example: "Rue Sainte-Anne"
+      "CalendarId": "YOUR_CALENDAR_ID",                 //example: "xxxx.yyy@gmail.com"
+      "Mail": "YOUR_MAIL",                              //example: "xxxx.yyy@gmail.com"
+      "MailNotCalendar": IS_IT_FOR_MAILING_OR_CALENDAR  //example: true (true for mail)
+    }
+  ]
 }
 
 //Use https://ville.saguenay.ca/services-aux-citoyens/environnement/ordures-menageres/horaire-de-la-collecte web page

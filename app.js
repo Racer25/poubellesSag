@@ -48,7 +48,9 @@ let getRuesRequest = function (civicNumber)
                         reject(err);
                     }
                     else if(!IsJsonString(body)) {
-                        reject("It's not JSON!! :"+ body);
+                        console.error("getRuesRequest");
+                        console.error(body);
+                        reject("It's not JSON!!");
                     }
                     else {
                         resolve(JSON.parse(body));
@@ -63,7 +65,7 @@ let getCollecteInfoRequest = function (idBatiment)
         request
             .post(
                 'https://ville.saguenay.ca/ajax/collectes/getcollecteinfo',
-                {form: {cle_batiment: idBatiment}},
+                {form: {ide: idBatiment}},
                 function (err, httpResponse, body) {
                     if (err) {
                         console.error(err);
@@ -71,6 +73,8 @@ let getCollecteInfoRequest = function (idBatiment)
                         reject(err);
                     }
                     else if(!IsJsonString(body)) {
+                        console.error("getCollecteInfoRequest");
+                        console.error(body);
                         reject("It's not JSON!! :"+ body);
                     }
                     else {
@@ -80,13 +84,13 @@ let getCollecteInfoRequest = function (idBatiment)
             );
     });
 };
-let getCeduleRequest = function (jour, type)
+let getCeduleRequest = function (horaire_id)
 {
     return new Promise((resolve, reject) => {
         request
             .post(
                 'https://ville.saguenay.ca/ajax/collectes/getcedule',
-                {form: {jour: jour, type: type}},
+                {form: {horaire_id: horaire_id}},
                 function (err, httpResponse, body) {
                     if (err) {
                         console.error(err);
@@ -94,7 +98,9 @@ let getCeduleRequest = function (jour, type)
                         reject(err);
                     }
                     else if(!IsJsonString(body)) {
-                        reject("It's not JSON!! :"+ body);
+                        console.error("getCeduleRequest");
+                        console.error(body);
+                        reject("It's not JSON!!");
                     }
                     else {
                         resolve(JSON.parse(body));
@@ -169,94 +175,118 @@ let promiseGlobal = function()
 };
 
 //Workflow for one type of garbage
-let WorkFlowOneTypeOfGarbage = function(type, attributeToUse, couleurPoubelle)
+let WorkFlowOneTypeOfGarbage = function()
 {
     promiseGlobal()
-        .then(daysJsonTab =>
+        .then(collecteInfosAndAddresses =>
         {
-            let promisesGetCeduleRequest = daysJsonTab.map(daysJson =>
-            {
-                let jour = daysJson[0][attributeToUse+"_jour"];
 
-                return Promise.all([getCeduleRequest(jour, type), daysJson[1]]);
+            let promisesGetCeduleRequest = collecteInfosAndAddresses.map(collecteInfoAndAddress =>
+            {
+                return Promise.all(
+                    [
+                        Promise.all([
+                            getCeduleRequest(collecteInfoAndAddress[0][0].horaire_id),//Ordure
+                            getCeduleRequest(collecteInfoAndAddress[0][1].horaire_id),//Recyclage
+                            getCeduleRequest(collecteInfoAndAddress[0][2].horaire_id),//Résidus verts
+                        ]),
+                        collecteInfoAndAddress
+                    ]);
             });
 
             return Promise.all(promisesGetCeduleRequest);
         })
         .then(datesJsonTab =>
         {
-            let promises = datesJsonTab.map(datesJson =>
+            let promises = datesJsonTab.map(datesJsonOneHome =>
             {
+
                 // Récupération des dates
-                let date_cueillette_String = datesJson[0].date_cueillette;
-                let date_cueillette = new Date(date_cueillette_String);
-
-                // MAJ dates
-                date_cueillette.setDate(date_cueillette.getDate() - 1);
-                date_cueillette.setHours(14, 0, 0);
-                let date_cueillette_start = date_cueillette;
-                let date_cueillette_end = new Date(date_cueillette);
-                date_cueillette_end.setHours(15, 0, 0);
-
-                let adress = datesJson[1];
-                if(adress.MailNotCalendar)
+                return Promise.all(datesJsonOneHome[0].map((horaireInfo, index, tab) =>
                 {
-                    let dateNow = new Date();
+                    let date_collecte_String = horaireInfo.date_collecte;
+                    let date_collecte = new Date(date_collecte_String);
 
-                    //Si on est la veille du passage et qu'il est entre 14h et 15h
-                    if(dateNow.getFullYear() === date_cueillette.getFullYear() &&
-                        dateNow.getMonth() === date_cueillette.getMonth() &&
-                        dateNow.getDate() === date_cueillette.getDate() &&
-                        dateNow.getHours() > 14 && dateNow.getHours() < 15)
+                    // MAJ dates
+                    date_collecte.setDate(date_collecte.getDate());
+                    date_collecte.setHours(14, 0, 0);
+                    let date_collecte_start = date_collecte;
+                    let date_collecte_end = new Date(date_collecte);
+                    date_collecte_end.setHours(15, 0, 0);
+
+                    let adress = datesJsonOneHome[1][1];
+
+                    //Trouver couleur poubelle
+                    let couleurPoubelle = "rouge";
+                    if(datesJsonOneHome[1][0][index].acronyme === "REC")
                     {
-                        //Envoyer mail
-
-                        //Init html of the mail
-                        let myHtml="<div><p>Il faut sortir la poubelle "+couleurPoubelle+" !!</p></div>";
-
-                        let mailOptions = {
-                            from: 'charlescousyn@gmail.com', // sender address
-                            to: adress.Mail, // list of receivers
-                            subject: 'Passage de la poubelle '+couleurPoubelle+" demain", // Subject line
-                            html: myHtml
-                        };
-
-                        promiseSendMail(mailOptions)
-                            .then(console.log)
-                            .catch(console.error);
+                        couleurPoubelle = "bleue";
                     }
-                }
-                else
-                {
-                    //Exécution du Calendrier
-                    return Promise.all([promiseCheckCalendar(adress.CalendarId, date_cueillette_start, date_cueillette_end), date_cueillette_start, date_cueillette_end])
-                        .then(([listEvents, date_cueillette_start, date_cueillette_end])=>
-                        {
-                            if (listEvents.length === 0)
-                            {
-                                //Insertion
-                                console.log("Insertion of event "+type+" at "+date_cueillette_start.toISOString()+"...");
-                                return promiseInsertCalendar(adress.CalendarId, date_cueillette_start, date_cueillette_end, couleurPoubelle);
-                            }
-                            else
-                            {
-                                console.log("Event "+type+" already existing at "+date_cueillette_start.toISOString()+", no insertion to do...");
-                                return false;
-                            }
-                        })
-                        .then((data) =>
-                        {
-                            if(data !== false)
-                            {
-                                console.log("Insertion of event "+type+"  finished");
-                            }
-                        })
-                        .catch(error =>
-                        {
-                            console.error(error);
-                        });
-                }
+                    else if(datesJsonOneHome[1][0][index].acronyme === "ORD")
+                    {
+                        couleurPoubelle = "verte";
+                    }
+                    else if(datesJsonOneHome[1][0][index].acronyme === "RES")
+                    {
+                        couleurPoubelle = " de résidus verts";
+                    }
 
+
+                    if(adress.MailNotCalendar)
+                    {
+                        let dateNow = new Date();
+
+                        //Si on est la veille du passage et qu'il est entre 14h et 15h
+                        if(dateNow.getFullYear() === date_collecte.getFullYear() &&
+                            dateNow.getMonth() === date_collecte.getMonth() &&
+                            dateNow.getDate() === date_collecte.getDate() &&
+                            dateNow.getHours() > 14 && dateNow.getHours() < 15)
+                        {
+                            //Envoyer mail
+                            //Init html of the mail
+                            let myHtml="<div><p>Il faut sortir la poubelle "+couleurPoubelle+" aujourd'hui!!</p></div>";
+
+                            let mailOptions = {
+                                from: 'charlescousyn@gmail.com', // sender address
+                                to: adress.Mail, // list of receivers
+                                subject: 'Passage de la poubelle '+couleurPoubelle+" demain", // Subject line
+                                html: myHtml
+                            };
+
+                            return promiseSendMail(mailOptions);
+                        }
+                    }
+                    else
+                    {
+                        //Exécution du Calendrier
+                        return Promise.all([promiseCheckCalendar(adress.CalendarId, date_collecte_start, date_collecte_end), date_collecte_start, date_collecte_end])
+                            .then(([listEvents, date_collecte_start, date_collecte_end])=>
+                            {
+                                if (listEvents.length === 0)
+                                {
+                                    //Insertion
+                                    console.log("Insertion of event "+couleurPoubelle+" at "+date_collecte_start.toISOString()+"...");
+                                    return promiseInsertCalendar(adress.CalendarId, date_collecte_start, date_collecte_end, couleurPoubelle);
+                                }
+                                else
+                                {
+                                    console.log("Event "+couleurPoubelle+" already existing at "+date_collecte_start.toISOString()+", no insertion to do...");
+                                    return false;
+                                }
+                            })
+                            .then((data) =>
+                            {
+                                if(data !== false)
+                                {
+                                    console.log("Insertion of event "+couleurPoubelle+"  finished");
+                                }
+                            })
+                            .catch(error =>
+                            {
+                                console.error(error);
+                            });
+                    }
+                }));
             });
             return Promise.all(promises);
         })
@@ -273,11 +303,11 @@ let iteration = function ()
     //Init calendar
     cal = new CalendarAPI(CONFIG_CALENDAR);
 
-    WorkFlowOneTypeOfGarbage("recyclage", "recyclage", "bleu");
-    WorkFlowOneTypeOfGarbage("vidange", "poubelle", "verte");
+    WorkFlowOneTypeOfGarbage();
 };
 
 // Cronjob config
+
 let task = new CronJob(
     {
         cronTime: '01 * * * *',
@@ -288,3 +318,5 @@ let task = new CronJob(
 
 // Launch CronJob
 task.start();
+
+//iteration();

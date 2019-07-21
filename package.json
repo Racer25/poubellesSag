@@ -2,9 +2,10 @@
   "name": "Poubelles",
   "version": "1.0.0",
   "dependencies": {
+    "axios": "^0.19.0",
     "cron": "^1.7.1",
     "node-google-calendar": "^1.1.1",
     "nodemailer": "^6.3.0",
-    "request": "^2.88.0"
+    "qs": "^6.7.0"
   }
 }

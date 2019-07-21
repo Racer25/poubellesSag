@@ -183,13 +183,15 @@ let WorkFlowOneTypeOfGarbage = function()
 
             let promisesGetCeduleRequest = collecteInfosAndAddresses.map(collecteInfoAndAddress =>
             {
+                let arrayOfGetCedulePromises = [];
+                for(let i = 0; i < collecteInfoAndAddress[0].length; i++)
+                {
+                    arrayOfGetCedulePromises.push(getCeduleRequest(collecteInfoAndAddress[0][i].horaire_id));
+                }
+
                 return Promise.all(
                     [
-                        Promise.all([
-                            getCeduleRequest(collecteInfoAndAddress[0][0].horaire_id),//Ordure
-                            getCeduleRequest(collecteInfoAndAddress[0][1].horaire_id),//Recyclage
-                            getCeduleRequest(collecteInfoAndAddress[0][2].horaire_id),//Résidus verts
-                        ]),
+                        Promise.all(arrayOfGetCedulePromises),
                         collecteInfoAndAddress
                     ]);
             });
@@ -318,5 +320,6 @@ let task = new CronJob(
 
 // Launch CronJob
 task.start();
+
 
 //iteration();

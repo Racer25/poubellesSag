@@ -54,7 +54,7 @@ let getCollecteInfoRequest = async function (idBatiment)
                 data: qs.stringify({ide: idBatiment})
             });
 
-        return response.data;
+        return response.data.filter((thing, index, self) => index === self.findIndex(t => t.nom === thing.nom));
 
     }
     catch(err)
@@ -136,21 +136,25 @@ let promiseSendMail = function(mailOptions)
 //Promise with tasks in common
 let promiseGlobal = async function()
 {
-    let adresses = CONFIG.Adresses;
+    let addresses = CONFIG.Adresses;
+    let streetJsonTab = await Promise.all(addresses.map(address => getRuesRequest(address.CivicNumber)));
+    let ids = streetJsonTab.map( (streetJson, index) => streetJson.find((elem) => elem.value === addresses[index].Street).id);
+    let promisesGetRueRequest = addresses.map((address, index) => Promise.all([getCollecteInfoRequest(ids[index]), address]));
 
-    let promisesGetRueRequest = adresses.map(async adress =>
+    /*
+    let promisesGetRueRequest = addresses.map(async address =>
     {
-        let streetJson = await getRuesRequest(adress.CivicNumber);
-        let id = streetJson.find((elem) => elem.value === adress.Street).id;
-        return Promise.all([getCollecteInfoRequest(id), adress]);
-        return [getCollecteInfoRequest(id), adress];
-    });
+        let streetJson = await getRuesRequest(address.CivicNumber);
+        let id = streetJson.find((elem) => elem.value === address.Street).id;
+        return Promise.all([getCollecteInfoRequest(id), address]);
+        return [getCollecteInfoRequest(id), address];
+    });*/
 
     return Promise.all(promisesGetRueRequest);
 };
 
 //Workflow for one type of garbage
-let WorkFlowOneTypeOfGarbage = async function()
+let workFlow = async function()
 {
     try
     {
@@ -221,13 +225,16 @@ let createSendEmailsAndHandleCalendarPromises = async function(couleurPoubelle, 
     if(adress.MailNotCalendar)
     {
         let dateNow = new Date();
+        const hourStartMail = 14;
+        const hourEndMail = 15;
 
         //Si on est la veille du passage et qu'il est entre 14h et 15h
         if(dateNow.getFullYear() === date_collecte.getFullYear() &&
             dateNow.getMonth() === date_collecte.getMonth() &&
             dateNow.getDate() === date_collecte.getDate() &&
-            dateNow.getHours() > 14 && dateNow.getHours() < 15)
+            dateNow.getHours() > hourStartMail && dateNow.getHours() < hourEndMail)
         {
+            console.log(`Sending mail to ${adress.Mail}...`);
             //Envoyer mail
             //Init html of the mail
             let myHtml="<div><p>Il faut sortir la poubelle " + couleurPoubelle + " aujourd'hui!!</p></div>";
@@ -240,6 +247,10 @@ let createSendEmailsAndHandleCalendarPromises = async function(couleurPoubelle, 
             };
 
             return promiseSendMail(mailOptions);
+        }
+        else
+        {
+            console.log(`Mail to ${adress.Mail} will be sent the ${date_collecte} between ${hourStartMail} and ${hourEndMail}`);
         }
     }
     else
@@ -269,7 +280,7 @@ let iteration = function ()
     //Init calendar
     cal = new CalendarAPI(CONFIG_CALENDAR);
 
-    WorkFlowOneTypeOfGarbage().then();
+    workFlow().then();
 };
 
 // Cronjob config

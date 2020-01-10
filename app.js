@@ -232,7 +232,7 @@ let createSendEmailsAndHandleCalendarPromises = async function(couleurPoubelle, 
         if(dateNow.getFullYear() === date_collecte.getFullYear() &&
             dateNow.getMonth() === date_collecte.getMonth() &&
             dateNow.getDate() === date_collecte.getDate() &&
-            dateNow.getHours() > hourStartMail && dateNow.getHours() < hourEndMail)
+            dateNow.getHours() >= hourStartMail && dateNow.getHours() < hourEndMail)
         {
             console.log(`Sending mail to ${adress.Mail}...`);
             //Envoyer mail
